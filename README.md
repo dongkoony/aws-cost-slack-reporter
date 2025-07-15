@@ -10,6 +10,96 @@
 - **시각화**: 블록 메시지 구성 + 월간 비용 추이 차트 이미지 첨부
 - **재활용성**: GitHub 퍼블릭 레포로 배포해 누구나 포크·확장 가능
 
+## 🚀 빠른 시작 (5분 설정)
+
+### 1. 사전 요구사항 설치
+
+```bash
+# uv 패키지 매니저 설치 (Python 의존성 관리)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.bashrc
+
+# AWS CLI 설치 및 설정
+aws configure
+# AWS Access Key ID: (IAM에서 발급받은 키)
+# AWS Secret Access Key: (IAM에서 발급받은 시크릿)
+# Default region name: ap-northeast-2
+# Default output format: json
+```
+
+### 2. 프로젝트 설정
+
+```bash
+# 프로젝트 폴더로 이동
+cd aws-cost-slack-reporter
+
+# 환경 변수 파일 생성
+python setup_env.py
+
+# .env 파일 편집하여 API 키들 입력
+nano .env  # 또는 vim .env
+```
+
+### 3. API 키 발급 및 설정
+
+#### 3.1 Slack Bot Token 발급
+1. [Slack API 사이트](https://api.slack.com/apps) 접속
+2. "Create New App" → "From scratch" 선택
+3. 앱 이름 입력 후 워크스페이스 선택
+4. **OAuth & Permissions** 메뉴에서 Bot Token Scopes 추가:
+   - `chat:write` (메시지 전송)
+   - `files:write` (파일 업로드)
+   - `calls:write` (통화 기능)
+5. "Install to Workspace" 클릭
+6. **Bot User OAuth Token** 복사 (xoxb-로 시작)
+
+#### 3.2 공공데이터포털 API Key 발급
+1. [공공데이터포털](https://www.data.go.kr/) 회원가입/로그인
+2. "특일 정보" API 검색 후 활용신청
+3. 승인 후 **인증키** 복사
+
+#### 3.3 CurrencyAPI.com API Key 발급
+1. [CurrencyAPI.com](https://currencyapi.com/) 회원가입
+2. 대시보드에서 **API Key** 복사
+
+#### 3.4 .env 파일 편집
+```bash
+# Slack 설정
+SLACK_BOT_TOKEN=xoxb-your-actual-bot-token
+SLACK_CHANNEL=C08PGLTTW6T  # 채널 ID (채널 우클릭 → 링크 복사에서 확인)
+
+# 공공데이터포털 API (공휴일 조회)
+PUBLIC_DATA_API_KEY=your-actual-api-key
+
+# CurrencyAPI.com (환율 조회)  
+CURRENCY_API_KEY=your-actual-api-key
+
+# AWS 설정
+AWS_DEFAULT_REGION=ap-northeast-2
+
+# 로깅 설정
+LOG_LEVEL=INFO
+DEBUG_MODE=false
+```
+
+### 4. 배포 실행
+
+```bash
+# 배포 스크립트 실행 (모든 AWS 리소스 자동 생성)
+chmod +x deploy.sh
+./deploy.sh
+```
+
+### 5. 테스트
+
+```bash
+# Lambda 함수 직접 테스트
+aws lambda invoke --function-name aws-cost-slack-reporter --region ap-northeast-2 response.json
+cat response.json
+```
+
+**🎉 완료! 이제 매일 평일 오후 6시에 자동으로 AWS 비용 리포트가 Slack으로 전송됩니다.**
+
 ## 🛠️ 기술 스택
 
 - **언어**: Python 3.12
@@ -18,6 +108,15 @@
 - **외부 API**: 공공데이터포털, CurrencyAPI.com
 - **Slack 연동**: slack_sdk
 - **차트 생성**: matplotlib
+
+## 📋 필요한 AWS 권한
+
+배포 스크립트가 자동으로 다음 권한을 설정합니다:
+- **Cost Explorer**: `ce:GetCostAndUsage`, `ce:GetDimensionValues`
+- **Lambda**: 함수 생성/업데이트/실행
+- **IAM**: 역할 생성 및 정책 연결
+- **EventBridge**: 스케줄 생성 및 관리
+- **CloudWatch**: 로그 생성 및 조회
 
 ## 🏗️ 시스템 아키텍처
 
@@ -48,25 +147,9 @@ graph TB
     end
     
     EB -->|트리거| L
-    L --> HC
-    HC -->|공휴일 확인| PD
-    L --> CR
-    CR -->|비용 데이터 조회| CE
-    L --> ER
-    ER -->|환율 정보 조회| CA
-    L --> CG
-    CG -->|차트 생성| L
-    L --> SU
-    SU -->|메시지 전송| SC
-    L -->|로깅| CW
     
-    style EB fill:#FF9900
-    style L fill:#009900
-    style CE fill:#FF9900
-    style CW fill:#FF9900
-    style PD fill:#4285F4
-    style CA fill:#4285F4
-    style SC fill:#4A154B
+    classDef slackNode fill:#6B46C1,stroke:#FFFFFF,stroke-width:2px,color:#FFFFFF
+    class SC slackNode
 ```
 
 ## 🔄 데이터 플로우
@@ -114,119 +197,6 @@ sequenceDiagram
     else 주말/공휴일인 경우
         L-->>EB: 리포트 전송 안함 응답
     end
-```
-
-## 🚀 빠른 시작
-
-### 1. 저장소 클론
-
-```bash
-git clone https://github.com/your-username/aws-cost-slack-reporter.git
-cd aws-cost-slack-reporter
-```
-
-### 2. 환경 변수 설정
-
-```bash
-# 환경 변수 파일 생성
-python setup_env.py
-
-# .env 파일 편집 (실제 API 키 입력)
-nano .env
-```
-
-필수 환경 변수:
-```bash
-# Slack 설정
-SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
-SLACK_CHANNEL=C1234567890
-
-# 공공데이터포털 API (공휴일 조회)
-PUBLIC_DATA_API_KEY=your-public-data-api-key
-
-# CurrencyAPI.com (환율 조회)
-CURRENCY_API_KEY=your-currency-api-key
-
-# AWS 설정
-AWS_DEFAULT_REGION=ap-northeast-2
-```
-
-### 3. 의존성 설치
-
-```bash
-uv sync
-```
-
-### 4. 로컬 테스트
-
-```bash
-# 환경 변수 검증
-python setup_env.py validate
-
-# Lambda 함수 테스트
-python src/lambda_function.py
-```
-
-### 5. AWS 배포
-
-```bash
-# AWS CLI 설정 확인
-aws configure
-
-# Lambda 함수 배포
-./deploy.sh
-```
-
-## 📋 설정 가이드
-
-### Slack Bot 설정
-
-1. [Slack API](https://api.slack.com/apps)에서 새 앱 생성
-2. Bot Token Scopes 추가:
-   - `chat:write` (메시지 전송)
-   - `files:write` (파일 업로드)
-3. 앱을 워크스페이스에 설치
-4. Bot User OAuth Token 복사
-5. 채널에 봇 초대
-
-### 공공데이터포털 API 키
-
-1. [공공데이터포털](https://www.data.go.kr/) 회원가입
-2. "공휴일정보조회서비스" 신청
-3. API 키 발급
-
-### CurrencyAPI.com API 키
-
-1. [CurrencyAPI.com](https://currencyapi.com/) 회원가입
-2. 무료 플랜으로 API 키 발급
-
-### AWS IAM 권한
-
-Lambda 함수에 필요한 권한:
-- `ce:GetCostAndUsage`
-- `ce:GetDimensionValues`
-- `logs:CreateLogGroup`
-- `logs:CreateLogStream`
-- `logs:PutLogEvents`
-
-## 🏗️ 프로젝트 구조
-
-```
-aws-cost-slack-reporter/
-├── src/                          # 소스 코드
-│   ├── __init__.py
-│   ├── lambda_function.py        # Lambda 메인 핸들러
-│   ├── holiday_checker.py        # 공휴일 확인
-│   ├── cost_explorer.py          # AWS 비용 조회
-│   ├── exchange_rate.py          # 환율 변환
-│   ├── chart_generator.py        # 차트 생성
-│   └── slack_utils.py            # Slack 연동
-├── .cursor/rules/                # Cursor Rules
-├── env.example                   # 환경 변수 템플릿
-├── setup_env.py                  # 환경 변수 설정 스크립트
-├── deploy.sh                     # 배포 스크립트
-├── pyproject.toml                # 프로젝트 설정
-└── README.md                     # 프로젝트 문서
 ```
 
 ## 🔧 개발 가이드
