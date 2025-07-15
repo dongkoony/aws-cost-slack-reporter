@@ -147,9 +147,25 @@ graph TB
     end
     
     EB -->|트리거| L
+    L --> HC
+    HC -->|공휴일 확인| PD
+    L --> CR
+    CR -->|비용 데이터 조회| CE
+    L --> ER
+    ER -->|환율 정보 조회| CA
+    L --> CG
+    CG -->|차트 생성| L
+    L --> SU
+    SU -->|메시지 전송| SC
+    L -->|로깅| CW
     
-    classDef slackNode fill:#6B46C1,stroke:#FFFFFF,stroke-width:2px,color:#FFFFFF
-    class SC slackNode
+    style EB fill:#FF9900
+    style L fill:#009900
+    style CE fill:#FF9900
+    style CW fill:#FF9900
+    style PD fill:#4285F4
+    style CA fill:#4285F4
+    style SC fill:#ffc9de
 ```
 
 ## 🔄 데이터 플로우
