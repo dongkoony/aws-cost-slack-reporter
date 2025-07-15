@@ -209,3 +209,6 @@ __marimo__/
 *.txt
 .venv-aws-slack/
 *.zip
+response.json
+.gitignore
+uv.lock
