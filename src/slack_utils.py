@@ -150,12 +150,28 @@ def upload_file_to_slack(
             if not channel:
                 raise ValueError("SLACK_CHANNEL 환경 변수가 설정되지 않았습니다.")
         
-        response = client.files_upload(
-            channels=channel,
-            file=file_content,
-            filename=filename,
-            title=title
-        )
+        # files_upload_v2를 사용하여 파일 업로드 (권장 방법)
+        import tempfile
+        import os as os_module
+        
+        # 임시 파일 생성
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+            tmp_file.write(file_content)
+            tmp_file_path = tmp_file.name
+        
+        try:
+            response = client.files_upload_v2(
+                channel=channel,
+                file=tmp_file_path,
+                filename=filename,
+                title=title
+            )
+        finally:
+            # 임시 파일 정리
+            try:
+                os_module.unlink(tmp_file_path)
+            except:
+                pass
         
         logger.info(f"Slack 파일 업로드 성공: {response['file']['id']}")
         return True
