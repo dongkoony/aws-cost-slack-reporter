@@ -49,7 +49,7 @@ nano .env  # 또는 vim .env
 4. **OAuth & Permissions** 메뉴에서 Bot Token Scopes 추가:
    - `chat:write` (메시지 전송)
    - `files:write` (파일 업로드)
-   - `calls:write` (통화 기능)
+   - `calls:write` (호출 기능)
 5. "Install to Workspace" 클릭
 6. **Bot User OAuth Token** 복사 (xoxb-로 시작)
 
