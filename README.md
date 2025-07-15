@@ -49,7 +49,7 @@ nano .env  # 또는 vim .env
 4. **OAuth & Permissions** 메뉴에서 Bot Token Scopes 추가:
    - `chat:write` (메시지 전송)
    - `files:write` (파일 업로드)
-   - `calls:write` (통화 기능)
+   - `calls:write` (호출 기능)
 5. "Install to Workspace" 클릭
 6. **Bot User OAuth Token** 복사 (xoxb-로 시작)
 
@@ -66,7 +66,7 @@ nano .env  # 또는 vim .env
 ```bash
 # Slack 설정
 SLACK_BOT_TOKEN=xoxb-your-actual-bot-token
-SLACK_CHANNEL=C08PGLTTW6T  # 채널 ID (채널 우클릭 → 링크 복사에서 확인)
+SLACK_CHANNEL=Your_Slack_Channer_ID  # 채널 ID (채널 우클릭 → 링크 복사에서 확인)
 
 # 공공데이터포털 API (공휴일 조회)
 PUBLIC_DATA_API_KEY=your-actual-api-key
@@ -75,7 +75,7 @@ PUBLIC_DATA_API_KEY=your-actual-api-key
 CURRENCY_API_KEY=your-actual-api-key
 
 # AWS 설정
-AWS_DEFAULT_REGION=ap-northeast-2
+AWS_DEFAULT_REGION=ap-northeast-2 (서울)
 
 # 로깅 설정
 LOG_LEVEL=INFO
