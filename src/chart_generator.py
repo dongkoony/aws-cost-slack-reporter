@@ -10,6 +10,9 @@ import matplotlib.dates as mdates
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Tuple
 import numpy as np
+import matplotlib.font_manager as fm
+import os
+import tempfile
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -17,57 +20,98 @@ logger = logging.getLogger(__name__)
 # KST 시간대 설정
 KST = timezone(timedelta(hours=9))
 
-# 한글 폰트 설정
+# Font settings (English only to avoid encoding issues)
 plt.rcParams['font.family'] = 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
+# 한국 폰트 설정
+def setup_korean_font():
+    """한국어 폰트를 설정합니다."""
+    try:
+        # 시스템에서 사용 가능한 한국어 폰트 찾기
+        korean_fonts = ['NanumGothic', 'Malgun Gothic', 'AppleGothic', 'UnDotum']
+        for font_name in korean_fonts:
+            try:
+                plt.rcParams['font.family'] = font_name
+                return
+            except:
+                continue
+        
+        # 기본 폰트로 설정
+        plt.rcParams['font.family'] = 'DejaVu Sans'
+        logging.warning("한국어 폰트를 찾을 수 없어 기본 폰트를 사용합니다.")
+    except Exception as e:
+        logging.error(f"폰트 설정 중 오류: {e}")
+
+def translate_service_name(korean_name: str) -> str:
+    """AWS 서비스 한국어 이름을 영어 약어로 변환합니다."""
+    translation_map = {
+        "Amazon Relational Database Service": "RDS",
+        "EC2 - Other": "EC2 - Other", 
+        "Amazon Elastic Container Service for Kubernetes": "EKS",
+        "Tax": "Tax",
+        "Amazon Elastic Compute Cloud - Compute": "EC2 - Compute",
+        "Amazon Virtual Private Cloud": "VPC",
+        "AWS Key Management Service": "KMS",
+        "Amazon Simple Storage Service": "S3",
+        "Amazon Elastic Load Balancing": "ELB",
+        "AWS Secrets Manager": "Secrets Manager"
+    }
+    return translation_map.get(korean_name, korean_name)
+
 def create_monthly_cost_chart(service_costs: Dict[str, float], monthly_total: float) -> bytes:
     """
-    월간 서비스별 비용 차트 생성
+    월간 AWS 비용 차트 생성 (막대 차트만, 차트 내용은 영어)
     
     Args:
-        service_costs: 서비스별 비용 딕셔너리
+        service_costs: 서비스 비용 딕셔너리
         monthly_total: 월간 총 비용
         
     Returns:
         차트 이미지 바이트 데이터
     """
     try:
+        setup_korean_font()
         # 상위 10개 서비스만 선택
         top_services = dict(sorted(service_costs.items(), key=lambda x: x[1], reverse=True)[:10])
         
         # 기타 서비스 비용 계산
         other_cost = sum(service_costs.values()) - sum(top_services.values())
         if other_cost > 0:
-            top_services['기타 서비스'] = other_cost
+            top_services['Other Services'] = other_cost
         
-        # 차트 생성
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
-        fig.suptitle('AWS 월간 비용 분석', fontsize=16, fontweight='bold')
+        # 차트 생성 (막대 차트만)
+        fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+        fig.suptitle('AWS Monthly Cost Analysis', fontsize=16, fontweight='bold')
         
-        # 1. 파이 차트 (서비스별 비용 비율)
-        ax1.pie(top_services.values(), labels=top_services.keys(), autopct='%1.1f%%', startangle=90)
-        ax1.set_title('서비스별 비용 비율', fontsize=12, fontweight='bold')
+        # 서비스명을 영어로 번역
+        service_names_en = []
+        for service in top_services.keys():
+            if service == 'Other Services':
+                service_names_en.append('Other Services')
+            else:
+                # 일반적인 AWS 서비스명을 영어로 번역
+                en_name = translate_service_name(service)
+                service_names_en.append(en_name)
         
-        # 2. 막대 차트 (서비스별 비용 금액)
-        services = list(top_services.keys())
+        # 막대 차트 (서비스 비용을 USD로 표시)
         costs = list(top_services.values())
         
-        bars = ax2.bar(range(len(services)), costs, color='skyblue', alpha=0.7)
-        ax2.set_title('서비스별 비용 금액', fontsize=12, fontweight='bold')
-        ax2.set_xlabel('서비스')
-        ax2.set_ylabel('비용 (USD)')
-        ax2.set_xticks(range(len(services)))
-        ax2.set_xticklabels(services, rotation=45, ha='right')
+        bars = ax.bar(range(len(service_names_en)), costs, color='skyblue', alpha=0.7)
+        ax.set_title('AWS Service Costs', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Service')
+        ax.set_ylabel('Cost (USD)')
+        ax.set_xticks(range(len(service_names_en)))
+        ax.set_xticklabels(service_names_en, rotation=45, ha='right')
         
         # 막대 위에 값 표시
         for bar, cost in zip(bars, costs):
             height = bar.get_height()
-            ax2.text(bar.get_x() + bar.get_width()/2., height + height*0.01,
+            ax.text(bar.get_x() + bar.get_width()/2., height + height*0.01,
                     f'${cost:.2f}', ha='center', va='bottom', fontsize=8)
         
         # 총 비용 정보 추가
-        fig.text(0.5, 0.02, f'월간 총 비용: ${monthly_total:.2f}', 
+        fig.text(0.5, 0.02, f'Monthly Total: ${monthly_total:.2f}', 
                 ha='center', fontsize=14, fontweight='bold', 
                 bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.7))
         
@@ -81,12 +125,12 @@ def create_monthly_cost_chart(service_costs: Dict[str, float], monthly_total: fl
         
         plt.close()
         
-        logger.info(f"월간 비용 차트 생성 완료: {len(top_services)}개 서비스")
+        logging.info(f"월간 비용 차트 생성 성공: {len(top_services)}개 서비스")
         return img_bytes
         
     except Exception as e:
-        logger.error(f"차트 생성 실패: {e}")
-        # 에러 시 빈 이미지 반환
+        logging.error(f"차트 생성 실패: {e}")
+        # 오류 시 빈 이미지 반환
         return create_error_chart()
 
 def create_daily_cost_trend_chart(daily_costs: List[Tuple[str, float]]) -> bytes:
@@ -152,11 +196,11 @@ def create_daily_cost_trend_chart(daily_costs: List[Tuple[str, float]]) -> bytes
         
         plt.close()
         
-        logger.info(f"일일 비용 추이 차트 생성 완료: {len(daily_costs)}일 데이터")
+        logging.info(f"일일 비용 추이 차트 생성 성공: {len(daily_costs)}일 데이터")
         return img_bytes
         
     except Exception as e:
-        logger.error(f"추이 차트 생성 실패: {e}")
+        logging.error(f"추이 차트 생성 실패: {e}")
         return create_error_chart()
 
 def create_cost_comparison_chart(daily_cost: float, monthly_cost: float) -> bytes:
@@ -218,22 +262,22 @@ def create_cost_comparison_chart(daily_cost: float, monthly_cost: float) -> byte
         
         plt.close()
         
-        logger.info("비용 비교 차트 생성 완료")
+        logging.info("비용 비교 차트 생성 성공")
         return img_bytes
         
     except Exception as e:
-        logger.error(f"비용 비교 차트 생성 실패: {e}")
+        logging.error(f"비용 비교 차트 생성 실패: {e}")
         return create_error_chart()
 
 def create_error_chart(message: str = "차트 생성 중 오류가 발생했습니다") -> bytes:
     """
-    에러 차트 생성
+    오류 차트 생성
     
     Args:
-        message: 에러 메시지
+        message: 오류 메시지
         
     Returns:
-        에러 차트 이미지 바이트 데이터
+        오류 차트 이미지 바이트 데이터
     """
     try:
         fig, ax = plt.subplots(figsize=(8, 6))
@@ -252,11 +296,11 @@ def create_error_chart(message: str = "차트 생성 중 오류가 발생했습�
         
         plt.close()
         
-        logger.warning(f"에러 차트 생성: {message}")
+        logging.warning(f"에러 차트 생성: {message}")
         return img_bytes
         
     except Exception as e:
-        logger.error(f"에러 차트 생성 실패: {e}")
+        logging.error(f"에러 차트 생성 실패: {e}")
         # 최소한의 빈 이미지 반환
         return b''
 
@@ -279,5 +323,5 @@ def generate_cost_report_chart(cost_summary: Dict[str, Any]) -> bytes:
         return create_monthly_cost_chart(service_breakdown, monthly_cost)
         
     except Exception as e:
-        logger.error(f"비용 리포트 차트 생성 실패: {e}")
+        logging.error(f"비용 리포트 차트 생성 실패: {e}")
         return create_error_chart()
