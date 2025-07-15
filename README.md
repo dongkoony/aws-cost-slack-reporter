@@ -165,7 +165,7 @@ graph TB
     style CW fill:#FF9900
     style PD fill:#4285F4
     style CA fill:#4285F4
-    style SC fill:#4A154B
+    style SC fill:#ffc9de
 ```
 
 ## 🔄 데이터 플로우
