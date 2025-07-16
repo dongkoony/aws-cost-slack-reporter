@@ -125,7 +125,9 @@ class TestIntegration:
         mock_client = Mock()
         mock_webclient.return_value = mock_client
         mock_client.chat_postMessage.return_value = {'ok': True, 'ts': '1234567890.123456'}
-        mock_client.files_upload.return_value = {'ok': True, 'file': {'id': 'F1234567890'}}
+        
+        # files_upload_v2 Mock 응답 설정
+        mock_client.files_upload_v2.return_value = {'ok': True, 'file': {'id': 'F1234567890'}}
         
         # Slack 전송 함수 호출 (실제 시그니처에 맞게)
         result = send_cost_report(
@@ -146,7 +148,7 @@ class TestIntegration:
         
         # Slack API 호출 확인
         assert mock_client.chat_postMessage.call_count == 2
-        mock_client.files_upload.assert_called_once()
+        mock_client.files_upload_v2.assert_called_once()
     
     def test_date_handling_integration(self):
         """날짜 처리 통합 테스트"""
