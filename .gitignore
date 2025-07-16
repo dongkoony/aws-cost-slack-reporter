@@ -208,6 +208,5 @@ __marimo__/
 .cursor/
 *.txt
 .venv-aws-slack/
-response.json
 .gitignore
 uv.lock
