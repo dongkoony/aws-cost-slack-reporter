@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.chart_generator import generate_cost_report_chart
 from src.cost_explorer import get_cost_summary
 from src.exchange_rate import get_exchange_rate
 from src.holiday_checker import should_send_report
@@ -84,8 +83,8 @@ class TestIntegration:
         # API 호출 확인
         mock_api_request.assert_called_once()
 
-    def test_chart_generation_integration(self):
-        """차트 생성 통합 테스트"""
+    def test_cost_data_structure_integration(self):
+        """비용 데이터 구조 통합 테스트"""
         # 샘플 데이터
         cost_data = {
             "daily_cost": 25.50,
@@ -97,12 +96,11 @@ class TestIntegration:
             },
         }
 
-        # 차트 생성 함수 호출
-        result = generate_cost_report_chart(cost_data)
-
-        # 결과 검증
-        assert isinstance(result, bytes)
-        assert len(result) > 0
+        # 데이터 구조 검증
+        assert isinstance(cost_data["daily_cost"], float)
+        assert isinstance(cost_data["monthly_cost"], float)
+        assert isinstance(cost_data["service_breakdown"], dict)
+        assert len(cost_data["service_breakdown"]) > 0
 
     @patch("src.slack_utils.WebClient")
     def test_slack_integration(self, mock_webclient):
@@ -132,7 +130,6 @@ class TestIntegration:
             monthly_cost_krw=585975,  # 450.75 * 1300
             exchange_rate=1300.0,
             service_costs={"Amazon EC2": 180.25, "Amazon RDS": 95.50},
-            chart_image=b"fake_chart_data",
         )
 
         # 결과 검증
