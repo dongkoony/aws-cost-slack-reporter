@@ -196,8 +196,8 @@ def check_holiday(date: str, api_key: str) -> bool:
             logger.error(f"예상치 못한 API 응답 구조: {data}")
             return False
 
-    except Exception:
-        logger.error("공휴일 확인 API 호출 실패")
+    except Exception as e:
+        logger.error(f"공휴일 확인 API 호출 실패: {e}")
         # 에러 시 기본값으로 평일 반환 (서비스 중단 방지)
         return False
 
@@ -224,9 +224,12 @@ def should_send_report() -> bool:
     Returns:
         리포트 전송 여부
     """
-    # 현재 KST 시간
+    # 현재 KST 시간 (Lambda는 UTC로 실행되므로 KST로 변환)
     now = datetime.now(KST)
     today_str = now.strftime("%Y%m%d")
+
+    logger.info(f"현재 KST 시간: {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    logger.info(f"확인할 날짜: {today_str}")
 
     # 주말 체크
     if not is_business_day(now):
@@ -237,15 +240,23 @@ def should_send_report() -> bool:
     api_key = os.environ.get("PUBLIC_DATA_API_KEY")
     if not api_key:
         logger.warning("PUBLIC_DATA_API_KEY가 설정되지 않음. 공휴일 체크를 건너뜁니다.")
-        return True  # API 키가 없으면 전송
+        # API 키가 없으면 기본적으로 전송하되, 주말만 체크
+        logger.info(f"평일이므로 리포트 전송 진행: {today_str}")
+        return True
 
-    is_holiday = check_holiday(today_str, api_key)
-    if is_holiday:
-        logger.info(f"공휴일이므로 리포트 전송 생략: {today_str}")
-        return False
-
-    logger.info(f"평일이므로 리포트 전송 진행: {today_str}")
-    return True
+    try:
+        is_holiday = check_holiday(today_str, api_key)
+        if is_holiday:
+            logger.info(f"공휴일이므로 리포트 전송 생략: {today_str}")
+            return False
+        else:
+            logger.info(f"평일이므로 리포트 전송 진행: {today_str}")
+            return True
+    except Exception as e:
+        logger.error(f"공휴일 체크 중 오류 발생: {e}")
+        # API 오류 시 기본적으로 전송 (서비스 중단 방지)
+        logger.info(f"API 오류로 인해 기본 전송 진행: {today_str}")
+        return True
 
 
 def get_date_range() -> tuple[str, str]:
