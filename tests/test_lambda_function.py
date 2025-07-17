@@ -48,12 +48,10 @@ class TestLambdaFunction:
     @patch("src.holiday_checker.should_send_report")
     @patch("src.cost_explorer.get_cost_summary")
     @patch("src.exchange_rate.get_current_exchange_rate_info")
-    @patch("src.chart_generator.generate_cost_report_chart")
     @patch("src.slack_utils.send_cost_report")
     def test_lambda_handler_success(
         self,
         mock_send_report,
-        mock_generate_chart,
         mock_exchange_rate,
         mock_get_costs,
         mock_should_send,
@@ -66,7 +64,6 @@ class TestLambdaFunction:
         mock_should_send.return_value = True
         mock_get_costs.return_value = sample_cost_data
         mock_exchange_rate.return_value = sample_exchange_rate_data
-        mock_generate_chart.return_value = b"fake_chart_data"
         mock_send_report.return_value = True
 
         # Lambda 핸들러 호출
@@ -82,7 +79,6 @@ class TestLambdaFunction:
         mock_should_send.assert_called_once()
         mock_get_costs.assert_called_once()
         mock_exchange_rate.assert_called_once()
-        mock_generate_chart.assert_called_once()
         mock_send_report.assert_called_once()
 
     @patch("src.holiday_checker.should_send_report")
@@ -151,42 +147,10 @@ class TestLambdaFunction:
     @patch("src.holiday_checker.should_send_report")
     @patch("src.cost_explorer.get_cost_summary")
     @patch("src.exchange_rate.get_current_exchange_rate_info")
-    @patch("src.chart_generator.generate_cost_report_chart")
-    def test_lambda_handler_chart_error(
-        self,
-        mock_generate_chart,
-        mock_exchange_rate,
-        mock_get_costs,
-        mock_should_send,
-        mock_lambda_context,
-        sample_cost_data,
-        sample_exchange_rate_data,
-    ):
-        """차트 생성 에러 처리 테스트"""
-        # Mock 설정
-        mock_should_send.return_value = True
-        mock_get_costs.return_value = sample_cost_data
-        mock_exchange_rate.return_value = sample_exchange_rate_data
-        mock_generate_chart.side_effect = Exception("Chart Generation Error")
-
-        # Lambda 핸들러 호출
-        event = {}
-        result = lambda_handler(event, mock_lambda_context)
-
-        # 결과 검증
-        assert result["statusCode"] == 500
-        response_body = json.loads(result["body"])
-        assert "내부 서버 오류" in response_body["error"]
-
-    @patch("src.holiday_checker.should_send_report")
-    @patch("src.cost_explorer.get_cost_summary")
-    @patch("src.exchange_rate.get_current_exchange_rate_info")
-    @patch("src.chart_generator.generate_cost_report_chart")
     @patch("src.slack_utils.send_cost_report")
     def test_lambda_handler_slack_error(
         self,
         mock_send_report,
-        mock_generate_chart,
         mock_exchange_rate,
         mock_get_costs,
         mock_should_send,
@@ -199,7 +163,6 @@ class TestLambdaFunction:
         mock_should_send.return_value = True
         mock_get_costs.return_value = sample_cost_data
         mock_exchange_rate.return_value = sample_exchange_rate_data
-        mock_generate_chart.return_value = b"fake_chart_data"
         mock_send_report.return_value = False  # Slack 전송 실패
 
         # Lambda 핸들러 호출
@@ -214,12 +177,10 @@ class TestLambdaFunction:
     @patch("src.holiday_checker.should_send_report")
     @patch("src.cost_explorer.get_cost_summary")
     @patch("src.exchange_rate.get_current_exchange_rate_info")
-    @patch("src.chart_generator.generate_cost_report_chart")
     @patch("src.slack_utils.send_cost_report")
     def test_lambda_handler_with_debug_mode(
         self,
         mock_send_report,
-        mock_generate_chart,
         mock_exchange_rate,
         mock_get_costs,
         mock_should_send,
@@ -237,7 +198,6 @@ class TestLambdaFunction:
             mock_should_send.return_value = True
             mock_get_costs.return_value = sample_cost_data
             mock_exchange_rate.return_value = sample_exchange_rate_data
-            mock_generate_chart.return_value = b"fake_chart_data"
             mock_send_report.return_value = True
 
             # Lambda 핸들러 호출
@@ -248,13 +208,11 @@ class TestLambdaFunction:
             assert result["statusCode"] == 200
             response_body = json.loads(result["body"])
             assert "비용 리포트 전송 완료" in response_body["message"]
-
         finally:
-            # 원래 설정 복원
-            if original_debug:
+            if original_debug is not None:
                 os.environ["DEBUG_MODE"] = original_debug
             else:
-                os.environ.pop("DEBUG_MODE", None)
+                del os.environ["DEBUG_MODE"]
 
     def test_lambda_handler_invalid_event(self, mock_lambda_context):
         """잘못된 이벤트 처리 테스트"""
@@ -273,12 +231,10 @@ class TestLambdaFunction:
     @patch("src.holiday_checker.should_send_report")
     @patch("src.cost_explorer.get_cost_summary")
     @patch("src.exchange_rate.get_current_exchange_rate_info")
-    @patch("src.chart_generator.generate_cost_report_chart")
     @patch("src.slack_utils.send_cost_report")
     def test_lambda_handler_slack_exception(
         self,
         mock_send_report,
-        mock_generate_chart,
         mock_exchange_rate,
         mock_get_costs,
         mock_should_send,
@@ -291,7 +247,6 @@ class TestLambdaFunction:
         mock_should_send.return_value = True
         mock_get_costs.return_value = sample_cost_data
         mock_exchange_rate.return_value = sample_exchange_rate_data
-        mock_generate_chart.return_value = b"fake_chart_data"
         mock_send_report.side_effect = Exception("Slack API Error")
 
         # Lambda 핸들러 호출
