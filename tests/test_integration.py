@@ -141,7 +141,6 @@ class TestIntegration:
         # Slack API 호출 확인
         assert mock_client.chat_postMessage.call_count == 2
         mock_client.files_upload_v2.assert_called_once()
-
     def test_date_handling_integration(self):
         """날짜 처리 통합 테스트"""
         from src.holiday_checker import get_date_range, get_monthly_date_range
