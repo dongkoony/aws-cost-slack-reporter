@@ -7,7 +7,7 @@ __version__ = "0.1.0"
 __author__ = "AWS Cost Slack Reporter Team"
 
 # 주요 모듈들
-from . import (chart_generator, cost_explorer, exchange_rate, holiday_checker,
+from . import (cost_explorer, exchange_rate, holiday_checker,
                lambda_function, slack_utils)
 from .cost_explorer import get_cost_summary
 from .exchange_rate import convert_usd_to_krw, get_exchange_rate
@@ -21,7 +21,6 @@ __all__ = [
     "holiday_checker",
     "cost_explorer",
     "exchange_rate",
-    "chart_generator",
     "slack_utils",
     "lambda_function",
     # 주요 함수
