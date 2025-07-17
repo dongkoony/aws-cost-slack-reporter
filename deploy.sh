@@ -96,8 +96,7 @@ if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION &> /d
             SLACK_BOT_TOKEN=$(grep SLACK_BOT_TOKEN .env | cut -d'=' -f2),
             SLACK_CHANNEL=$(grep SLACK_CHANNEL .env | cut -d'=' -f2),
             PUBLIC_DATA_API_KEY=$(grep PUBLIC_DATA_API_KEY .env | cut -d'=' -f2),
-            CURRENCY_API_KEY=$(grep CURRENCY_API_KEY .env | cut -d'=' -f2),
-            AWS_DEFAULT_REGION=$(grep AWS_DEFAULT_REGION .env | cut -d'=' -f2)
+            CURRENCY_API_KEY=$(grep CURRENCY_API_KEY .env | cut -d'=' -f2)
         }" \
         --region $REGION
     
@@ -190,7 +189,7 @@ EOF
             SLACK_BOT_TOKEN=$(grep SLACK_BOT_TOKEN .env | cut -d'=' -f2),
             SLACK_CHANNEL=$(grep SLACK_CHANNEL .env | cut -d'=' -f2),
             PUBLIC_DATA_API_KEY=$(grep PUBLIC_DATA_API_KEY .env | cut -d'=' -f2),
-            CURRENCY_API_KEY=$(grep CURRENCY_API_KEY .env | cut -d'=' -f2),
+            CURRENCY_API_KEY=$(grep CURRENCY_API_KEY .env | cut -d'=' -f2)
         }" \
         --region $REGION
 fi
@@ -200,11 +199,11 @@ RULE_NAME="aws-cost-slack-reporter-schedule"
 if ! aws events describe-rule --name $RULE_NAME --region $REGION &> /dev/null; then
     echo "⏰ EventBridge 규칙 생성 중..."
     
-    # 규칙 생성 (월~금 18:00 KST = 09:00 UTC)
+    # 규칙 생성 (매일 13:00 KST = 04:00 UTC) - 테스트용
     aws events put-rule \
         --name $RULE_NAME \
-        --schedule-expression "cron(0 9 ? * MON-FRI *)" \
-        --description "AWS Cost Slack Reporter - 매일 평일 18:00 KST 실행" \
+        --schedule-expression "cron(0 4 ? * * *)" \
+        --description "AWS Cost Slack Reporter - 매일 13:00 KST 실행 (테스트용)" \
         --region $REGION
     
     # Lambda 함수에 권한 부여
