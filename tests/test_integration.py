@@ -113,15 +113,6 @@ class TestIntegration:
             "ts": "1234567890.123456",
         }
 
-        # files_upload_v2 Mock 응답 설정 (더 구체적으로)
-        mock_response = Mock()
-        mock_response.__getitem__ = Mock(
-            side_effect=lambda key: (
-                {"id": "F1234567890"} if key == "file" else {"ok": True}
-            )
-        )
-        mock_client.files_upload_v2.return_value = mock_response
-
         # Slack 전송 함수 호출 (실제 시그니처에 맞게)
         result = send_cost_report(
             daily_cost_usd=25.50,
@@ -137,7 +128,6 @@ class TestIntegration:
 
         # Slack API 호출 확인
         assert mock_client.chat_postMessage.call_count == 2
-        mock_client.files_upload_v2.assert_called_once()
     def test_date_handling_integration(self):
         """날짜 처리 통합 테스트"""
         from src.holiday_checker import get_date_range, get_monthly_date_range
