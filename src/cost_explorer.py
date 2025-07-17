@@ -201,7 +201,7 @@ def get_cost_summary() -> Dict[str, Any]:
     Returns:
         비용 요약 딕셔너리
     """
-    from .holiday_checker import get_date_range, get_monthly_date_range
+    from src.holiday_checker import get_date_range, get_monthly_date_range
 
     try:
         # 금일 비용 (현재까지)
