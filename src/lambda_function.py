@@ -40,6 +40,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     try:
         logger.info("AWS Cost Slack Reporter 시작")
+        
+        # 실행 시점 시간 정보 로깅
+        utc_now = datetime.now(timezone.utc)
+        kst_now = datetime.now(KST)
+        logger.info(f"실행 시점 UTC: {utc_now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        logger.info(f"실행 시점 KST: {kst_now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        logger.info(f"EventBridge 이벤트: {json.dumps(event, indent=2)}")
 
         # Lambda 컨텍스트 정보 로깅
         if context:
@@ -49,9 +56,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.info(f"남은 시간: {context.get_remaining_time_in_millis()}ms")
 
         # 공휴일 체크
-        from .holiday_checker import should_send_report
+        from src.holiday_checker import should_send_report
 
-        if not should_send_report():
+        logger.info("공휴일 체크 시작...")
+        should_send = should_send_report()
+        logger.info(f"리포트 전송 여부: {should_send}")
+
+        if not should_send:
             logger.info("오늘은 리포트 전송 대상이 아닙니다 (주말 또는 공휴일)")
             return {
                 "statusCode": 200,
@@ -64,7 +75,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
 
         # 비용 데이터 조회
-        from .cost_explorer import get_cost_summary
+        from src.cost_explorer import get_cost_summary
 
         cost_summary = get_cost_summary()
         daily_cost = cost_summary["daily_cost"]
@@ -76,7 +87,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         )
 
         # 환율 조회 및 통화 변환
-        from .exchange_rate import (get_cost_in_both_currencies,
+        from src.exchange_rate import (get_cost_in_both_currencies,
                                     get_current_exchange_rate_info)
 
         daily_costs = get_cost_in_both_currencies(daily_cost)
@@ -85,14 +96,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         logger.info(f"환율 변환 완료: {exchange_info['formatted_rate']}")
 
-        # 차트 생성
-        from .chart_generator import generate_cost_report_chart
-
-        chart_image = generate_cost_report_chart(cost_summary)
-        logger.info("차트 생성 완료")
-
-        # Slack으로 리포트 전송
-        from .slack_utils import send_cost_report
+        # Slack으로 리포트 전송 (차트 없이 텍스트만)
+        from src.slack_utils import send_cost_report
 
         success = send_cost_report(
             daily_cost_usd=daily_costs["usd"],
@@ -101,7 +106,6 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             monthly_cost_krw=monthly_costs["krw"],
             exchange_rate=exchange_info["rate"],
             service_costs=service_breakdown,
-            chart_image=chart_image,
         )
 
         if success:
@@ -147,8 +151,24 @@ def test_lambda_locally():
     print("🧪 로컬 Lambda 함수 테스트 시작")
     print("=" * 50)
 
-    # 테스트 이벤트 생성
-    test_event = {}
+    # 현재 시간 정보 출력
+    utc_now = datetime.now(timezone.utc)
+    kst_now = datetime.now(KST)
+    print(f"테스트 시점 UTC: {utc_now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    print(f"테스트 시점 KST: {kst_now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+
+    # 테스트 이벤트 생성 (EventBridge 스케줄러 시뮬레이션)
+    test_event = {
+        "version": "0",
+        "id": "test-event-id",
+        "detail-type": "Scheduled Event",
+        "source": "aws.events",
+        "account": "123456789012",
+        "time": utc_now.isoformat(),
+        "region": "ap-northeast-2",
+        "resources": ["arn:aws:events:ap-northeast-2:123456789012:rule/test-rule"],
+        "detail": {}
+    }
 
     # Mock Lambda 컨텍스트
     class MockContext:
@@ -217,7 +237,7 @@ def test_connections():
 
     # Slack 연결 테스트
     try:
-        from .slack_utils import test_slack_connection
+        from src.slack_utils import test_slack_connection
 
         if test_slack_connection():
             print("✅ Slack 연결 성공")
@@ -228,12 +248,18 @@ def test_connections():
 
     # 공공데이터포털 API 테스트
     try:
-        from .holiday_checker import check_holiday
+        from src.holiday_checker import check_holiday, should_send_report
 
         api_key = os.environ.get("PUBLIC_DATA_API_KEY")
         if api_key:
-            is_holiday = check_holiday("20241225", api_key)  # 크리스마스 테스트
-            print(f"✅ 공공데이터포털 API 연결 성공 (크리스마스 공휴일: {is_holiday})")
+            # 오늘 날짜로 테스트
+            today = datetime.now(KST).strftime("%Y%m%d")
+            is_holiday = check_holiday(today, api_key)
+            print(f"✅ 공공데이터포털 API 연결 성공 (오늘 {today} 공휴일: {is_holiday})")
+            
+            # 리포트 전송 여부 테스트
+            should_send = should_send_report()
+            print(f"✅ 리포트 전송 여부: {should_send}")
         else:
             print("❌ PUBLIC_DATA_API_KEY가 설정되지 않음")
     except Exception as e:
@@ -241,7 +267,7 @@ def test_connections():
 
     # 환율 API 테스트
     try:
-        from .exchange_rate import get_exchange_rate
+        from src.exchange_rate import get_exchange_rate
 
         rate = get_exchange_rate("USD", "KRW")
         print(f"✅ 환율 API 연결 성공 (1 USD = {rate:.2f} KRW)")
