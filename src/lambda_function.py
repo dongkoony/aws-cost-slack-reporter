@@ -56,7 +56,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.info(f"남은 시간: {context.get_remaining_time_in_millis()}ms")
 
         # 공휴일 체크
-        from src.holiday_checker import should_send_report
+        try:
+            from src.holiday_checker import should_send_report
+        except ImportError:
+            from holiday_checker import should_send_report
 
         logger.info("공휴일 체크 시작...")
         should_send = should_send_report()
@@ -75,7 +78,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
 
         # 비용 데이터 조회
-        from src.cost_explorer import get_cost_summary
+        try:
+            from src.cost_explorer import get_cost_summary
+        except ImportError:
+            from cost_explorer import get_cost_summary
 
         cost_summary = get_cost_summary()
         daily_cost = cost_summary["daily_cost"]
@@ -87,7 +93,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         )
 
         # 환율 조회 및 통화 변환
-        from src.exchange_rate import (get_cost_in_both_currencies,
+        try:
+            from src.exchange_rate import (get_cost_in_both_currencies,
+                                        get_current_exchange_rate_info)
+        except ImportError:
+            from exchange_rate import (get_cost_in_both_currencies,
                                     get_current_exchange_rate_info)
 
         daily_costs = get_cost_in_both_currencies(daily_cost)
@@ -97,7 +107,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.info(f"환율 변환 완료: {exchange_info['formatted_rate']}")
 
         # Slack으로 리포트 전송 (차트 없이 텍스트만)
-        from src.slack_utils import send_cost_report
+        try:
+            from src.slack_utils import send_cost_report
+        except ImportError:
+            from slack_utils import send_cost_report
 
         success = send_cost_report(
             daily_cost_usd=daily_costs["usd"],
@@ -237,7 +250,10 @@ def test_connections():
 
     # Slack 연결 테스트
     try:
-        from src.slack_utils import test_slack_connection
+        try:
+            from src.slack_utils import test_slack_connection
+        except ImportError:
+            from slack_utils import test_slack_connection
 
         if test_slack_connection():
             print("✅ Slack 연결 성공")
@@ -248,7 +264,10 @@ def test_connections():
 
     # 공공데이터포털 API 테스트
     try:
-        from src.holiday_checker import check_holiday, should_send_report
+        try:
+            from src.holiday_checker import check_holiday, should_send_report
+        except ImportError:
+            from holiday_checker import check_holiday, should_send_report
 
         api_key = os.environ.get("PUBLIC_DATA_API_KEY")
         if api_key:
@@ -267,7 +286,10 @@ def test_connections():
 
     # 환율 API 테스트
     try:
-        from src.exchange_rate import get_exchange_rate
+        try:
+            from src.exchange_rate import get_exchange_rate
+        except ImportError:
+            from exchange_rate import get_exchange_rate
 
         rate = get_exchange_rate("USD", "KRW")
         print(f"✅ 환율 API 연결 성공 (1 USD = {rate:.2f} KRW)")
