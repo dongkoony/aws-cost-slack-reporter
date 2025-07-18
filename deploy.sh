@@ -202,8 +202,10 @@ if ! aws events describe-rule --name $RULE_NAME --region $REGION &> /dev/null; t
     # 규칙 생성 (매일 13:00 KST = 04:00 UTC) - 테스트용
     aws events put-rule \
         --name $RULE_NAME \
-        --schedule-expression "cron(0 4 ? * * *)" \
-        --description "AWS Cost Slack Reporter - 매일 13:00 KST 실행 (테스트용)" \
+        --schedule-expression "cron(0 9 ? * * *)" \
+        --description "AWS Cost Slack Reporter - 매일 18:00 KST 실행" \
+        # --schedule-expression "cron(0 4 ? * * *)" \
+        # --description "AWS Cost Slack Reporter - 매일 13:00 KST 실행 (테스트용)" \
         --region $REGION
     
     # Lambda 함수에 권한 부여
